@@ -24,10 +24,10 @@ impl Display for DocType {
 
 impl Display for KVSError {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        let value = match self {
-            KVSError::InvalidJSON(v) => v,
-            KVSError::InvalidKey(v) => v,
-        };
-        write!(fmt, "{}", value)
+        match self {
+            KVSError::InvalidJSON(v) | KVSError::InvalidKey(v) => {
+                write!(fmt, "{}", v)
+            }
+        }
     }
 }

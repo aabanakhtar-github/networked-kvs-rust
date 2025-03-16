@@ -18,8 +18,9 @@ impl KeyValueStore {
         Document{data: DocType::Raw("pong".to_string())}
     }
 
-    pub fn get(&self, key: &str) -> Result<&Document, String> {
-        self.store.get(key).ok_or_else(|| format!("Key {} not found", key))
+    pub fn get(&self, key: &str) -> Result<&Document, KVSError> {
+        self.store.get(key).
+            ok_or_else(|| KVSError::InvalidJSON(format!("Couldn't find key! {}", key.to_string())))
     }
 
     pub fn put(&mut self, key: String, value: Document) -> Result<(), KVSError> {
