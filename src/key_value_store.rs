@@ -20,7 +20,7 @@ impl KeyValueStore {
 
     pub fn get(&self, key: &str) -> Result<&Document, KVSError> {
         self.store.get(key).
-            ok_or_else(|| KVSError::InvalidJSON(format!("Couldn't find key! {}", key.to_string())))
+            ok_or_else(|| KVSError::InvalidKey(format!("Couldn't find key! {}", key.to_string())))
     }
 
     pub fn put(&mut self, key: String, value: Document) -> Result<(), KVSError> {
@@ -35,7 +35,10 @@ impl KeyValueStore {
         Ok(())
     }
 
-    pub fn del(&mut self, key: &str) {
-        self.store.remove(key);
+    pub fn del(&mut self, key: &str) -> Result<(), KVSError> {
+        match self.store.remove(key) {
+            Some(_) => Ok(()),
+            None => Err(KVSError::InvalidKey(format!("Couldn't find key {}", key.to_string()))),
+        }
     }
 }

@@ -31,7 +31,7 @@ This document outlines the steps to build a robust networked key-value store in 
     * `put(&mut self, key: String, value_str: String) -> Result<(), KvsError>` (with JSON validation)
     * `del(&mut self, key: &str)`
 
-5.  **JSON Validation in `put()`: TODO**
+5.  **JSON Validation in `put()`: DONE**
     * Parse JSON using `serde_json::from_str`.
     * Perform custom validation (required fields, data types).
     * Return `KvsError::InvalidJson` or `KvsError::ValidationError` on failure.
