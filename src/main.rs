@@ -1,22 +1,22 @@
 mod key_value_store;
 mod kvs_types;
+mod net_util;
 
 use std::io::Error;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
 use tokio::net::TcpListener;
 use key_value_store::*;
 use kvs_types::*;
 use tokio::net::*;
 
 async fn handle_connection(mut sock: TcpStream) -> Result<(), Error> {
-    let mut buf = vec![0u8; 1024];
     loop {
-        let sz = sock
-            .read(&mut buf)
-            .await?;
-
-        sock.write_all(&buf[0..sz]).await?;
-        buf.fill(0);
+        let (mut reader, mut writer) = sock.split();
+        let mut buf_reader = BufReader::new(&mut reader);
+        let mut buf_writer = BufWriter::new(&mut writer);
+        buf_reader.fill_buf().await?;
+        let buf = buf_reader.buf();
+        buf_writer.write_all(&buf[0..buf.len()]).await?;
     }
 }
 

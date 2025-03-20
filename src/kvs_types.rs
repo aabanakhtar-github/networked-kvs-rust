@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use thiserror::Error;
 
 #[derive(Debug)]
 pub enum DocType {
@@ -6,7 +7,7 @@ pub enum DocType {
     Raw(String),
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum KVSError {
     InvalidJSON(String),
     InvalidKey(String),
@@ -19,15 +20,5 @@ impl Display for DocType {
             DocType::Raw(v) => v,
         };
         write!(fmt, "{}", value)
-    }
-}
-
-impl Display for KVSError {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        match self {
-            KVSError::InvalidJSON(v) | KVSError::InvalidKey(v) => {
-                write!(fmt, "{}", v)
-            }
-        }
     }
 }
