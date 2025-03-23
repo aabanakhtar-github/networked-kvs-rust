@@ -13,11 +13,14 @@ use crate::packet::PacketType::Hello;
 
 async fn handle_connection(mut sock: TcpStream) -> Result<(), PacketError> {
     loop {
-        let (mut reader, mut writer) = sock.split();
-        let mut buf_reader = BufReader::new(&mut reader);
-        let mut buf_writer = BufWriter::new(&mut writer);
-        let packet = Packet{packet_type: Hello, content_length: 5, content: PacketBody::TextPacket("Hello".to_string())};
-        packet.prep_and_send(&mut buf_writer).await?;
+        let mut buf = vec![0; 1024];
+        let data = sock.read(&mut buf).await?;
+        let packet = Packet{
+            packet_type: Hello,
+            content_length: buf.len(),
+            content: PacketBody::TextPacket(String::from_utf8(buf)?)
+        };
+        sock.write(packet.to_bytes().as_slice()).await?;
     }
 }
 

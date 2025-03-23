@@ -9,7 +9,9 @@ pub enum DocType {
 
 #[derive(Error, Debug)]
 pub enum KVSError {
+    #[error("Invalid JSON String!")]
     InvalidJSON(String),
+    #[error("Invalid Key String!")]
     InvalidKey(String),
 }
 
