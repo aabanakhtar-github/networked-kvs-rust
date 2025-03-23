@@ -5,8 +5,6 @@ mod packet;
 use std::io::Error;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
 use tokio::net::TcpListener;
-use key_value_store::*;
-use kvs_types::*;
 use packet::*;
 use tokio::net::*;
 use crate::packet::PacketType::Hello;
@@ -20,7 +18,8 @@ async fn handle_connection(mut sock: TcpStream) -> Result<(), PacketError> {
             content_length: buf.len(),
             content: PacketBody::TextPacket(String::from_utf8(buf)?)
         };
-        sock.write(packet.to_bytes().as_slice()).await?;
+        let buf: Vec<u8> = Packet::try_into(packet)?;
+        sock.write(buf.as_slice()).await?;
     }
 }
 
@@ -36,7 +35,5 @@ async fn main() -> Result<(), Error> {
         let (sock, _) = connection_manager.accept().await?;
         tokio::spawn(handle_connection(sock));
     }
-
-    Ok(())
 }
 
