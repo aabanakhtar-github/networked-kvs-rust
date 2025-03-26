@@ -1,7 +1,9 @@
 use futures::SinkExt;
+use futures::StreamExt;
 use thiserror::Error;
 use tokio::net::TcpStream;
 use tokio_util::codec::Framed;
+use crate::packet;
 use crate::packet::{Packet, PacketCodec, PacketError};
 
 #[derive(Debug, Error)]
@@ -12,7 +14,7 @@ enum NetworkError {
     PacketError(#[from] PacketError),
 }
 
-struct Socket {
+pub struct Socket {
     base: Framed<TcpStream, PacketCodec>,
 }
 
@@ -21,8 +23,16 @@ impl Socket {
        Socket{base: Framed::new(stream, PacketCodec)}
     }
 
-    pub fn read_packet(&mut self) -> Result<Packet, PacketError> {
-        todo!()
+    pub async fn read_packet(&mut self) -> Result<Option<Packet>, NetworkError> {
+        match self.base.next().await {
+            Some(packet_result) => {
+                match packet_result {
+                    Ok(p) => Ok(Some(p)), 
+                    Err(e) => Err(NetworkError::from(e))
+                }
+            }, 
+            None => Ok(None)
+        }
     }
 
     pub async fn send(&mut self, packet: Packet) -> Result<(), NetworkError> {
