@@ -7,20 +7,17 @@ use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWrit
 use tokio::net::TcpListener;
 use packet::*;
 use tokio::net::*;
-use crate::packet::PacketType::Hello;
+use futures::sink::SinkExt;
+use tokio_util::bytes::BytesMut;
+use tokio_util::codec::{Framed, FramedRead, FramedWrite, LinesCodec};
 
 async fn handle_connection(mut sock: TcpStream) -> Result<(), PacketError> {
-    loop {
-        let mut buf = vec![0; 1024];
-        let data = sock.read(&mut buf).await?;
-        let packet = Packet{
-            packet_type: Hello,
-            content_length: buf.len(),
-            content: PacketBody::TextPacket(String::from_utf8(buf)?)
-        };
-        let buf: Vec<u8> = Packet::try_into(packet)?;
-        sock.write(buf.as_slice()).await?;
-    }
+    let mut writer = Framed::new(sock, PacketCodec);
+    let packet = Packet{
+        packet_type: PacketType::TextPacket, content_length: 5usize, content: PacketBody::TextPacket("Hithe".to_string())
+    };
+    writer.send(packet).await?;
+    return Ok(())
 }
 
 #[tokio::main]
