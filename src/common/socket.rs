@@ -3,11 +3,10 @@ use futures::StreamExt;
 use thiserror::Error;
 use tokio::net::TcpStream;
 use tokio_util::codec::Framed;
-use crate::packet;
-use crate::packet::{Packet, PacketCodec, PacketError};
+use crate::common::packet::{Packet, PacketError, PacketCodec, };
 
 #[derive(Debug, Error)]
-enum NetworkError {
+pub enum NetworkError {
     #[error("Generic Network error: {0}")]
     GenericError(String),
     #[error("Packet Error")]

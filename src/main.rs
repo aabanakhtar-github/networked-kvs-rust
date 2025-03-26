@@ -1,18 +1,14 @@
-mod key_value_store;
-mod kvs_types;
-mod packet;
-mod socket;
+mod common;
 
 use std::io::Error;
 use tokio::net::TcpListener;
-use packet::*;
 use tokio::net::*;
-use crate::socket::{Socket, NetworkError}; 
+use common::{packet::*, socket::*, kvs_types::*, key_value_store::*};
 
 async fn handle_connection(mut stream: TcpStream) -> Result<(), NetworkError> {
-    let mut socket = Socket::new(stream); 
+    let mut socket = Socket::new(stream);
     let packet = Packet{
-        packet_type: PacketType::TextPacket, content_length: 5usize, content: PacketBody::TextPacket("Hithe".to_string())
+        packet_type: PacketType::TextPacket, content_length: 5usize, content: PacketBody::TextPacket("Hi there!".to_string())
     };
     socket.send(packet).await?;
     return Ok(())

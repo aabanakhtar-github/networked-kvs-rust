@@ -200,7 +200,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "networked-kvs"
+name = "networked_kvs"
 version = "0.1.0"
 dependencies = [
  "futures",

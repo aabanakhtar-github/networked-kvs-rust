@@ -1,4 +1,3 @@
-use crate::packet::PacketBody::TextPacket;
 use thiserror::Error;
 use std::default::Default;
 use std::convert::{TryFrom, TryInto};
@@ -40,7 +39,7 @@ pub struct Packet {
 }
 
 impl Default for PacketBody {
-    fn default() -> Self { TextPacket(String::default()) }
+    fn default() -> Self { PacketBody::TextPacket(String::default()) }
 }
 
 impl PacketType {
@@ -81,7 +80,7 @@ impl Encoder<Packet> for PacketCodec {
         let len_bytes: [u8; 4] = (item.content_length as u32).to_be_bytes();
         dst.put_slice(&len_bytes);
         let content = match &item.content {
-            TextPacket(value) => value.as_bytes()
+            PacketBody::TextPacket(value) => value.as_bytes()
         };
         dst.put_slice(content);
         Ok(())

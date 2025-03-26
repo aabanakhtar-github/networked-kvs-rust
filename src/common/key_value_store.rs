@@ -1,5 +1,6 @@
-use crate::kvs_types::{DocType, KVSError};
+
 use std::collections::HashMap;
+use crate::common::kvs_types::{DocType, KVSError};
 
 pub struct Document {
    pub data: DocType,
