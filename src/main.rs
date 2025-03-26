@@ -1,6 +1,7 @@
 mod key_value_store;
 mod kvs_types;
 mod packet;
+mod socket;
 
 use std::io::Error;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};

@@ -20,7 +20,7 @@ pub enum PacketBody {
 
 #[derive(Error, Debug)]
 pub enum PacketError {
-    #[error("Generic Error")]
+    #[error("Generic Error {0}")]
     GenericError(String),
     #[error("Invalid packet type!")]
     InvalidPacketType,
