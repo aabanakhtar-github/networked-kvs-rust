@@ -11,10 +11,18 @@ pub const MIN_PACKET_LEN: usize = 5;
 pub enum PacketType {
     #[default]
     TextPacket = 1,
+    GetRequest = 2,
+    SetRequest = 3,
+    DelRequest = 4,
+    PingRequest = 5
 }
 
 pub enum PacketBody {
     TextPacket(String),
+    RequestBody{
+        key: String,
+        new_value: Option<String>
+    }
 }
 
 #[derive(Error, Debug)]
@@ -46,6 +54,10 @@ impl PacketType {
     pub fn from_u8(packet_type: u8) -> Option<PacketType> {
         match packet_type {
             1 => Some(PacketType::TextPacket),
+            2 => Some(PacketType::GetRequest),
+            3 => Some(PacketType::SetRequest),
+            4 => Some(PacketType::DelRequest),
+            5 => Some(PacketType::PingRequest),
             _ => None
         }
     }
@@ -53,6 +65,10 @@ impl PacketType {
     pub fn to_u8(&self) -> u8 {
         match &self {
             PacketType::TextPacket => 1,
+            PacketType::GetRequest => 2,
+            PacketType::SetRequest => 3,
+            PacketType::DelRequest => 4,
+            PacketType::PingRequest => 5,
         }
     }
 }
@@ -111,7 +127,10 @@ impl Decoder for PacketCodec {
         let mut result: Packet = Default::default();
         result.packet_type = p_type;
         result.content = match &result.packet_type {
-           PacketType::TextPacket => PacketBody::TextPacket(String::from_utf8(src[MIN_PACKET_LEN..].to_vec())?)
+            PacketType::TextPacket => PacketBody::TextPacket(String::from_utf8(src[MIN_PACKET_LEN..].to_vec())?),
+            PacketType::DelRequest | PacketType::GetRequest | PacketType::SetRequest => {
+
+            },
         };
         result.content_length = p_content_len;
 
