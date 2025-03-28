@@ -7,10 +7,14 @@ use crate::common::packet::{Packet, PacketError, PacketCodec, };
 
 #[derive(Debug, Error)]
 pub enum NetworkError {
+    #[error("standard error")]
+    StdError(#[from] std::io::Error),
     #[error("Generic Network error: {0}")]
     GenericError(String),
     #[error("Packet Error")]
     PacketError(#[from] PacketError),
+    #[error("Connection Error")]
+    ConnectionError,
 }
 
 pub struct Socket {
