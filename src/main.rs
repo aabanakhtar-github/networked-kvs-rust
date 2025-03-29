@@ -9,20 +9,11 @@ use crate::client::app::Client;
 #[tokio::main]
 async fn main() -> Result<(), NetworkError> {
     let usage = "Usage: kvs <server | client> <ip>";
+    let args: Vec<String> = std::env::args().collect();
     
-    if std::env::args().count() == 0 {
-        println!("{}", usage);
-        return Ok(())
-    }
-    
-    let mode = std::env::args()
-        .nth(1)
-        .unwrap_or("server".to_string());
-    
-    let ip = std::env::args()
-        .nth(2)
-        .unwrap_or("127.0.0.1:8080".to_string());
-    
+    let mode = &args[1];
+    let ip = &args[2]; 
+    println!("{}", args[1]); 
     match mode.as_str() {
        "server" => { 
            let mut server = Server::new(&ip);

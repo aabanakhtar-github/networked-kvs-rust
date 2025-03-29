@@ -30,10 +30,10 @@ impl Socket {
         match self.base.next().await {
             Some(packet_result) => {
                 match packet_result {
-                    Ok(p) => Ok(Some(p)), 
+                    Ok(p) => Ok(Some(p)),
                     Err(e) => Err(NetworkError::from(e))
                 }
-            }, 
+            },
             None => Ok(None)
         }
     }

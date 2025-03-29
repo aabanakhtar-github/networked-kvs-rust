@@ -1,8 +1,10 @@
 use std::convert::{TryFrom, TryInto};
 use std::default::Default;
+use std::usize::MIN;
 use thiserror::Error;
 use tokio_util::bytes::{Buf, BufMut, BytesMut};
 use tokio_util::codec::{Decoder, Encoder};
+use crate::common::util::ByteSize;
 
 pub const MIN_PACKET_LEN: usize = 5;
 
@@ -17,7 +19,9 @@ pub enum PacketType {
     PingRequest = 5,
 }
 
+#[derive(Default)]
 pub enum PacketBody {
+    #[default]
     EmptyBody,
     TextPacket(String),
     RequestBody {
@@ -25,6 +29,8 @@ pub enum PacketBody {
         new_value: Option<String>,
     },
 }
+
+
 
 #[derive(Error, Debug)]
 pub enum PacketError {
@@ -43,13 +49,23 @@ pub enum PacketError {
 #[derive(Default)]
 pub struct Packet {
     pub packet_type: PacketType,
-    pub content_length: usize,
     pub content: PacketBody,
 }
 
-impl Default for PacketBody {
-    fn default() -> Self {
-        PacketBody::TextPacket(String::default())
+impl ByteSize for PacketBody {
+    fn byte_size(&self) -> usize {
+        match self {
+            PacketBody::TextPacket(v) => v.len(),
+            PacketBody::RequestBody {key, new_value: Some(v)} => {
+                // strings + null terminators + two 4 byte blocks with length data
+                key.len() + v.len() + 4 + 4 + 2 
+            }, 
+            PacketBody::EmptyBody => 0,
+            PacketBody::RequestBody { key, ..} => {
+                // similar principle
+                key.len() + 4 + 1
+            }
+        }
     }
 }
 
@@ -77,18 +93,11 @@ impl PacketType {
 }
 
 impl Packet {
-    pub fn new(packet_type: PacketType, content_length: usize, content: PacketBody) -> Packet {
+    pub fn new(packet_type: PacketType, content: PacketBody) -> Packet {
         Packet {
             packet_type,
-            content_length,
             content,
         }
-    }
-
-    // utility function
-    fn buf_copy(&self, buf: &mut [u8], from: &[u8]) {
-        let min_len = buf.len().min(from.len());
-        buf[..min_len].copy_from_slice(&from[..min_len]);
     }
 }
 
@@ -98,31 +107,27 @@ impl Encoder<Packet> for PacketCodec {
     type Error = PacketError;
 
     fn encode(&mut self, item: Packet, dst: &mut BytesMut) -> Result<(), Self::Error> {
-        dst.reserve(item.content_length + MIN_PACKET_LEN);
         dst.put_u8(item.packet_type.to_u8());
-        
-        let len_bytes: [u8; 4] = (item.content_length as u32).to_be_bytes();
-        dst.put_slice(&len_bytes);
-        
+        println!("{}", item.content.byte_size());
+        dst.put_u32(item.content.byte_size() as u32);
+
         let mut tmp_buf = Vec::new();
         let content = match &item.content {
             PacketBody::TextPacket(value) => value.as_bytes(),
             PacketBody::RequestBody { key, new_value } => {
-                let key_len: [u8; 4] = u32::to_be_bytes(key.len() as u32);
-                tmp_buf.put_slice(&key_len);
+                tmp_buf.put_u32(key.len() as u32);
                 tmp_buf.put_slice(key.as_bytes());
                 
                 if let Some(value) = new_value {
-                    let value_len: [u8; 4] = u32::to_be_bytes(value.len() as u32); 
-                    tmp_buf.put_slice(&value_len);
+                    tmp_buf.put_u32(value.len() as u32); 
                     tmp_buf.put_slice(value.as_bytes());
                 }
-                
+
                 tmp_buf.as_slice()
             },
-            PacketBody::EmptyBody => &[] as &[u8] 
+            PacketBody::EmptyBody => &[] as &[u8]
         };
-        
+
         dst.put_slice(content);
         Ok(())
     }
@@ -137,39 +142,34 @@ impl Decoder for PacketCodec {
             return Ok(None);
         }
 
-        let p_type = match PacketType::from_u8(src[0]) {
-            Some(p_type) => p_type,
+        let packet_type = match PacketType::from_u8(src[0]) {
+            Some(packet_type) => packet_type,
             None => return Err(PacketError::InvalidPacketType),
         };
-        let p_header: [u8; 4] = src[1..5]
-            .try_into()
-            .map_err(|_| PacketError::GenericError("Failed to parse packet header".to_string()))?;
-        let p_content_len = u32::from_be_bytes(p_header) as usize;
 
-        if src.len() < MIN_PACKET_LEN + p_content_len {
+        let content_len = u32::from_be_bytes([src[1], src[2], src[3], src[4]]) as usize;
+
+        if src.len() < MIN_PACKET_LEN + content_len {
             return Ok(None);
         }
 
-        let mut result: Packet = Default::default();
-        result.packet_type = p_type;
-        
-        result.content = match &result.packet_type {
-            PacketType::TextPacket => {
-                PacketBody::TextPacket(String::from_utf8(src[MIN_PACKET_LEN..].to_vec())?)
-            }
-            PacketType::DelRequest | PacketType::GetRequest => {
-                PacketBody::RequestBody {key: String::from_utf8(src[MIN_PACKET_LEN..].to_vec())?, new_value: None} 
-            }
-            PacketType::SetRequest => {
-               panic!() 
-            }
-            PacketType::PingRequest => {
-                PacketBody::EmptyBody{}
-            }
-        };
-        result.content_length = p_content_len;
+        src.advance(5);
+        let content_bytes = src.split_to(content_len).to_vec();
 
-        src.advance(MIN_PACKET_LEN + p_content_len);
-        Ok(Some(result))
+        let packet_body = match packet_type {
+            PacketType::TextPacket => {
+                PacketBody::TextPacket(
+                    String::from_utf8(content_bytes)
+                        .map_err(PacketError::StdUtf8Error)?
+                )
+            },
+            _ => return Err(PacketError::InvalidPacketType),
+        };
+        
+        Ok(Some(Packet {
+            packet_type,
+            content: packet_body,
+        }))
     }
+
 }

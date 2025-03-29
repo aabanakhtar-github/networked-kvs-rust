@@ -8,4 +8,6 @@ pub mod packet;
 use packet::*;
 
 pub mod socket;
+mod util;
+
 use socket::*;
