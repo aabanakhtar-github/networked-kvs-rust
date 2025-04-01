@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use futures::TryFutureExt;
+use futures::{StreamExt, TryFutureExt};
 use tokio::sync::Mutex;
 use tokio::net::{TcpListener, TcpStream};
 use crate::common::KeyValueStore;
@@ -32,9 +32,20 @@ impl Server {
         let mut socket = Socket::new(stream);
         let packet = Packet {
             packet_type: PacketType::TextPacket,
-            content: PacketBody::TextPacket("Hi there!".to_string()),
+            content: PacketBody::TextPacket("Server recieved connection!".to_string()),
         };
         socket.send(packet).await?;
-        Ok(())
+        
+        loop {
+            if let Some(packet) = socket.read_packet().await? {
+                match packet.packet_type {
+                    PacketType::GetRequest => {
+                        println!("Recieved get request!");
+                        socket.send(packet).await?;
+                    }
+                    _ =>  println!("Received a stray packet.") 
+                } 
+            }
+        } 
     }
 }

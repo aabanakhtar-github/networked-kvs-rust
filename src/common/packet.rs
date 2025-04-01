@@ -4,12 +4,13 @@ use std::usize::MIN;
 use thiserror::Error;
 use tokio_util::bytes::{Buf, BufMut, BytesMut};
 use tokio_util::codec::{Decoder, Encoder};
+use crate::common::packet::PacketBody::EmptyBody;
 use crate::common::util::ByteSize;
 
 pub const MIN_PACKET_LEN: usize = 5;
 
 #[repr(u8)]
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub enum PacketType {
     #[default]
     TextPacket = 1,
@@ -20,6 +21,7 @@ pub enum PacketType {
 }
 
 #[derive(Default)]
+#[derive(Debug)]
 pub enum PacketBody {
     #[default]
     EmptyBody,
@@ -57,13 +59,13 @@ impl ByteSize for PacketBody {
         match self {
             PacketBody::TextPacket(v) => v.len(),
             PacketBody::RequestBody {key, new_value: Some(v)} => {
-                // strings + null terminators + two 4 byte blocks with length data
-                key.len() + v.len() + 4 + 4 + 2 
+                // strings + two 4 byte blocks with length data
+                key.len() + v.len() + 4 + 4
             }, 
             PacketBody::EmptyBody => 0,
             PacketBody::RequestBody { key, ..} => {
                 // similar principle
-                key.len() + 4 + 1
+                key.len() + 4 
             }
         }
     }
@@ -146,9 +148,13 @@ impl Decoder for PacketCodec {
             Some(packet_type) => packet_type,
             None => return Err(PacketError::InvalidPacketType),
         };
+        
+        println!("Packet type: {:?}", packet_type);
 
         let content_len = u32::from_be_bytes([src[1], src[2], src[3], src[4]]) as usize;
-
+        
+        println!("Content len: {}", content_len); 
+        
         if src.len() < MIN_PACKET_LEN + content_len {
             return Ok(None);
         }
@@ -163,7 +169,37 @@ impl Decoder for PacketCodec {
                         .map_err(PacketError::StdUtf8Error)?
                 )
             },
-            _ => return Err(PacketError::InvalidPacketType),
+            PacketType::DelRequest | PacketType::GetRequest | PacketType::SetRequest => {
+                let key_len = u32::from_be_bytes([
+                    content_bytes[0],
+                    content_bytes[1],
+                    content_bytes[2],
+                    content_bytes[3],
+                ]) as usize;
+                let key = String::from_utf8(content_bytes[4..4 + key_len].to_vec())?;
+                let new_value =  if content_bytes.len() > 4 + key_len {
+                    let offset = 4 + key_len;
+                    let value_key_bytes = &content_bytes[offset..offset + 4];
+                    let value_len = u32::from_be_bytes([
+                        value_key_bytes[0],
+                        value_key_bytes[1],
+                        value_key_bytes[2],
+                        value_key_bytes[3],
+                    ]) as usize;
+                    let new_value =
+                        String::from_utf8(content_bytes[offset + 4..offset+ 4 + value_len].to_vec())?;
+
+                    Some(new_value)
+                } else {
+                    None
+                };
+
+                PacketBody::RequestBody {
+                    key,
+                    new_value
+                }
+            },
+            PacketType::PingRequest => EmptyBody
         };
         
         Ok(Some(Packet {
