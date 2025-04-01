@@ -19,7 +19,7 @@ impl Client {
 
     pub async fn main(&mut self) -> Result<(), NetworkError> {
         loop {
-            println!("KVS> ");
+            println!("KVS > ");
             stdout().flush()?;
             let mut input = String::new(); 
             stdin().read_line(&mut input).map_err(|_| GenericError("Invalid input!".to_string()))?; 
@@ -76,6 +76,7 @@ impl Client {
             "DEL" => PacketType::DelRequest,
             _ => return Err(GenericError("Invalid method!".to_string()))
         };
+        
         let p_body = PacketBody::RequestBody {
             key: key_value.to_string(), 
             new_value: doc.clone() 
