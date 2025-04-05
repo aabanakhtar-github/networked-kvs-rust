@@ -23,17 +23,17 @@ impl Server {
     pub async fn main(self: &Arc<Self>) -> Result<(), NetworkError>  {
         let listener = TcpListener::bind(&self.ip)
             .map_err(|_| NetworkError::ConnectionError).await?;
-        
-        
+
+
         loop {
             let (stream, _) = listener.accept().
                 map_err(|_| NetworkError::ConnectionError).await?;
-            
+
             let server_ref = Arc::clone(&self);
-            
-            tokio::spawn(async move { 
+
+            tokio::spawn(async move {
                 server_ref.handle_connection(stream).
-                    map_err(|_| NetworkError::GenericError("Failed to spawn task for client!".to_string())).await; 
+                    map_err(|_| NetworkError::GenericError("Failed to spawn task for client!".to_string())).await;
             });
         }
     }
@@ -42,7 +42,7 @@ impl Server {
         let mut socket = Socket::new(stream);
         let packet = Packet {
             packet_type: PacketType::TextPacket,
-            content: PacketBody::TextPacket("Server received connection!".to_string()),
+            content: PacketBody::TextPacket("Connected".to_string()),
         };
         socket.send(packet).await?;
         
@@ -50,10 +50,9 @@ impl Server {
             if let Some(packet) = socket.read_packet().await? {
                 match packet.packet_type {
                     PacketType::GetRequest => {
-                        socket.send(packet).await?;
                     },
-                    PacketType::SetRequest => {
-                        
+                    PacketType::SetRequest | PacketType::DelRequest => {
+                        self.mutate_store(&packet);
                     },
                     PacketType::PingRequest => {
                         let pong = Packet{
@@ -76,10 +75,21 @@ impl Server {
         } 
     }
     
-    async fn mutate_store(packet: &Packet) -> Result<(), NetworkError> {
+    async fn mutate_store(self, packet: &Packet) -> Result<(), NetworkError> {
         match &packet.content {
-            PacketBody::TextPacket(s) => { Ok(( ))}
-            _ => { Ok (( ))}
+            PacketBody::RequestBody(key, new_value) {
+                // acquire the kvs mutex
+                let kvs_ref = Arc::clone(&self.kvs);
+                let kvs: KeyValueStore = kvs_ref.lock().unwrap();
+                match packet.packet_type {
+                    PacketType::SetRequest => {
+                        kvs.set(key, new_value); 
+                    }
+                }     
+                
+                Ok(())
+            },
+            _ => { Ok(()) }
         }
     }
     
