@@ -2,6 +2,7 @@ mod server;
 mod client;
 mod common;
 
+use std::sync::Arc;
 use crate::common::socket::NetworkError;
 use crate::server::app::Server;
 use crate::client::app::Client; 
@@ -16,7 +17,7 @@ async fn main() -> Result<(), NetworkError> {
     println!("{}", args[1]); 
     match mode.as_str() {
        "server" => { 
-           let mut server = Server::new(&ip);
+           let server = Arc::new(Server::new(&ip));
            server.main().await
        }
        "client" => {

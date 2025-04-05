@@ -42,6 +42,14 @@ impl Client {
         let mut value: Option<String> = None;
         println!("{}", args.as_slice().join(" ")); 
         match args.len() {
+            1 => {
+                if args[0] != "PING" {
+                    println!("{}", "Input Error"); 
+                }
+                
+                self.send_request("PING", "", &None).await?;
+                return Ok(());
+            }
             2 | 3 => {
                 method = args[0].to_string();
                 key = args[1].to_string();
@@ -95,6 +103,8 @@ impl Client {
         self.connection.send(Packet::new(
             p_type,
             p_body,
-        )).await 
+        )).await?;
+        
+        self.handle_response().await
     }
 }

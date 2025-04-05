@@ -13,6 +13,8 @@ pub enum KVSError {
     InvalidJSON(String),
     #[error("Invalid Key String!")]
     InvalidKey(String),
+    #[error("Operation failed!")]
+    OperationFailed(String),
 }
 
 impl Display for DocType {
