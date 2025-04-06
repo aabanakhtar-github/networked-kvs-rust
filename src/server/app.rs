@@ -63,6 +63,20 @@ impl Server {
             if let Some(packet) = socket.read_packet().await? {
                 match packet.packet_type {
                     PacketType::GetRequest => {
+                        let kvs = self.kvs.lock().await;
+                        if let PacketBody::RequestBody { key, .. } = packet.content {
+                            match kvs.get(&key) {
+                                Err(e) => socket.send(&FAIL_PACKET).await?,
+                                Ok(value) => {
+                                    let as_string = value.data.to_string();
+                                    let packet = Packet::new(
+                                        TextPacket, 
+                                        PacketBody::TextPacket(as_string),
+                                    );
+                                    socket.send(&packet).await?;
+                                } 
+                            } 
+                        }
                     },
                     PacketType::SetRequest | PacketType::DelRequest => {
                         if let Err(e) = self.mutate_store(&packet).await {
@@ -88,8 +102,6 @@ impl Server {
     }
     
     async fn mutate_store(&self, packet: &Packet) -> Result<(), KVSError> {
-
-
         match &packet.content {
             PacketBody::RequestBody{key, new_value} => {
                 // acquire the kvs mutex
