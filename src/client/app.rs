@@ -73,7 +73,6 @@ impl Client {
     }
     
     async fn handle_response(&mut self) -> Result<(), NetworkError> {
-        println!("Handling reponse!");
         if let Some(packet) = self.connection.read_packet().await? {
             match packet.content {
                 PacketBody::TextPacket(data) => {
@@ -82,7 +81,6 @@ impl Client {
                 _ => {}
             } 
         }
-        println!("Dopne hadling!"); 
         Ok(()) 
     } 
     
@@ -100,7 +98,7 @@ impl Client {
             new_value: doc.clone() 
         };
 
-        self.connection.send(Packet::new(
+        self.connection.send(&Packet::new(
             p_type,
             p_body,
         )).await?;

@@ -10,7 +10,7 @@ use crate::common::util::ByteSize;
 pub const MIN_PACKET_LEN: usize = 5;
 
 #[repr(u8)]
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub enum PacketType {
     #[default]
     TextPacket = 1,
@@ -20,7 +20,7 @@ pub enum PacketType {
     PingRequest = 5,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 #[derive(Debug)]
 pub enum PacketBody {
     #[default]
@@ -48,7 +48,7 @@ pub enum PacketError {
     TokioError(#[from] tokio::io::Error),
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Packet {
     pub packet_type: PacketType,
     pub content: PacketBody,

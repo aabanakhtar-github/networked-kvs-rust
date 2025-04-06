@@ -38,8 +38,8 @@ impl Socket {
         }
     }
 
-    pub async fn send(&mut self, packet: Packet) -> Result<(), NetworkError> {
-        self.base.send(packet).await?;
+    pub async fn send(&mut self, packet: &Packet) -> Result<(), NetworkError> {
+        self.base.send(packet.clone()).await?;
         Ok(())
     }
 }
