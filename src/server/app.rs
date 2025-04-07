@@ -42,12 +42,17 @@ impl Server {
     }
 
     async fn handle_connection(&self, stream: TcpStream) -> Result<(), NetworkError> {
-        let FAIL_PACKET = Packet{
+        let fail_packet = Packet{
             packet_type: TextPacket,
             content: PacketBody::TextPacket(String::from("Request failed!")),
         };
+        
+        let ok_packet = Packet {
+            packet_type: TextPacket,
+            content: PacketBody::TextPacket(String::from("Ok")),
+        };
 
-        let PONG = Packet{
+        let pong = Packet{
             packet_type: TextPacket,
             content: PacketBody::TextPacket("Pong!".to_string()),
         };
@@ -66,7 +71,7 @@ impl Server {
                         let kvs = self.kvs.lock().await;
                         if let PacketBody::RequestBody { key, .. } = packet.content {
                             match kvs.get(&key) {
-                                Err(e) => socket.send(&FAIL_PACKET).await?,
+                                Err(e) => socket.send(&fail_packet).await?,
                                 Ok(value) => {
                                     let as_string = value.data.to_string();
                                     let packet = Packet::new(
@@ -80,13 +85,14 @@ impl Server {
                     },
                     PacketType::SetRequest | PacketType::DelRequest => {
                         if let Err(e) = self.mutate_store(&packet).await {
-                            socket.send(&FAIL_PACKET).await?;
+                            socket.send(&fail_packet).await?;
                             println!("Failed to process a user's request!");
                         }
+                        socket.send(&ok_packet).await?;
                     },
                     PacketType::PingRequest => {
 
-                        socket.send(&PONG).await?;
+                        socket.send(&pong).await?;
                     },
                     PacketType::TextPacket => {
                         let content = if let PacketBody::TextPacket(s) = packet.content {

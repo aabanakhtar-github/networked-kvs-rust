@@ -10,7 +10,7 @@ use crate::common::util::ByteSize;
 pub const MIN_PACKET_LEN: usize = 5;
 
 #[repr(u8)]
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, Eq, PartialEq)]
 pub enum PacketType {
     #[default]
     TextPacket = 1,

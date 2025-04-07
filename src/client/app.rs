@@ -21,7 +21,8 @@ impl Client {
     pub async fn main(&mut self) -> Result<(), NetworkError> {
         let stdin = tokio::io::stdin(); 
         let mut reader = BufReader::new(stdin);
-        
+        println!("awaiting connection...");
+        self.handle_response().await?;
         loop {
             print!("KVS > ");
             stdout().flush()?;
@@ -42,14 +43,6 @@ impl Client {
         let mut value: Option<String> = None;
         println!("{}", args.as_slice().join(" ")); 
         match args.len() {
-            1 => {
-                if args[0] != "PING" {
-                    println!("{}", "Input Error"); 
-                }
-                
-                self.send_request("PING", "", &None).await?;
-                return Ok(());
-            }
             2 | 3 => {
                 method = args[0].to_string();
                 key = args[1].to_string();
@@ -63,13 +56,11 @@ impl Client {
             }
         }
 
-        let result = self.send_request(&method, &key, &value).await;
-        match result {
-            Err(_) => println!("Error sending request"),
-            _ => {}
-        };
-        
-        self.handle_response().await
+        if let Err(_) = self.send_request(&method, &key, &value).await{
+            println!("Error sending request");
+        }
+
+        Ok(())
     }
     
     async fn handle_response(&mut self) -> Result<(), NetworkError> {
@@ -81,7 +72,7 @@ impl Client {
                 _ => {}
             } 
         }
-        Ok(()) 
+        Ok(())
     } 
     
     async fn send_request(&mut self, method: &str, key_value: &str, doc: &Option<String>) -> Result<(), NetworkError> {
@@ -102,7 +93,9 @@ impl Client {
             p_type,
             p_body,
         )).await?;
-        
-        self.handle_response().await
+
+        self.handle_response().await?;
+
+        Ok(())
     }
 }
